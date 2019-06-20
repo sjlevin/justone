@@ -9,7 +9,7 @@
             var peer = null
             var conn = null
 
-            const connectMessageBox = document.getElementById("connectMessageBox");
+            const connectServerMessageBox = document.getElementById("connectServerMessageBox");
             const connectNameMessageBox = document.getElementById("connectNameMessageBox");
             const connectButton = document.getElementById("connectButton");
             const clueMessageBox = document.getElementById("clueMessageBox");
@@ -72,10 +72,10 @@
                 };
             }
 
-            connectMessageBox.onkeypress = generateOnKeyPress(connectButton)
-            connectNameMessageBox.onkeypress = connectMessageBox.onkeypress
+            connectServerMessageBox.onkeypress = generateOnKeyPress(connectButton)
+            connectNameMessageBox.onkeypress = connectServerMessageBox.onkeypress
             connectButton.onclick = function() {
-                connect(connectMessageBox.value, connectNameMessageBox.value)
+                connect(connectServerMessageBox.value, connectNameMessageBox.value)
             }
 
             clueMessageBox.onkeypress = generateOnKeyPress(clueSubmitButton)
@@ -94,12 +94,18 @@
             peer.on('error', err => {
                 alert("Peer error: " + err)
             })
+
+            // Allow prefill message boxes from hash fields
+            window.location.hash.substr(1).split('&').forEach(param => {
+                let vals = param.split('=')
+                document.getElementById(vals[0]).value = decodeURIComponent(vals[1]);
+            })
         }
     </script>
 </head>
 
 <body>
-    <input type="text" id="connectMessageBox" placeholder="Connect to server..." autofocus="true" />
+    <input type="text" id="connectServerMessageBox" placeholder="Connect to server..." autofocus="true" />
     <input type="text" id="connectNameMessageBox" placeholder="Connect with name..." autofocus="true" />
     <button type="button" id="connectButton">Connect</button>
 

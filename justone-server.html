@@ -4,6 +4,7 @@
 <head>
     <title>Just One Server</title>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@0.3.20/dist/peer.min.js"></script>
+    <script src="https://rawcdn.githack.com/davidshimjs/qrcodejs/04f46c6a0708418cb7b96fc563eacae0fbf77674/qrcode.min.js"></script>
     <script src="./justone-wordlist.js"></script>
     <script src="./wordlist-class.js"></script>
     <script type="text/javascript">
@@ -20,6 +21,7 @@
             const waitTime = 500
             const startButton = document.getElementById("startButton");
             const serverSpan = document.getElementById("serverSpan")
+            const serverQRSpan = document.getElementById("serverQRSpan")
             const connectionsSpan = document.getElementById("connectionsSpan")
             const cluesSpan = document.getElementById("clues")
             const currentGuesserSpan = document.getElementById("currentGuesserSpan")
@@ -43,6 +45,7 @@
                 }, [])
                 connectionsSpan.innerHTML = JSON.stringify(connectionsArray)
             }
+
             function waitingForChanged() {
                 if (!gameStarted) {
                     cluesSpan.innerHTML = ""
@@ -54,6 +57,15 @@
                 }
             }
 
+            function getQRCode(id) {
+                target = window.location.href + "#connectServerMessageBox=" + id
+                new QRCode(serverQRSpan, {
+                    text: target,
+                    width: 128,
+                    height: 128
+                })
+            }
+
             var peer = new Peer()
             console.log("peer: " + peer)
             peer.on('error', err => {
@@ -62,6 +74,7 @@
             peer.on('open', id => {
                 console.log("Server ID: " + id)
                 serverSpan.innerHTML = id
+                getQRCode(id)
             })
             peer.on('connection', c => {
                 connections.add(c)
@@ -153,6 +166,9 @@
 
 <body>
     Server: <span id="serverSpan">Acquiring...</span>
+
+    <p />
+    <span id="serverQRSpan"></span>
     
     <p />
     Connected: <span id="connectionsSpan">None</span>
