@@ -58,7 +58,8 @@
             }
 
             function getQRCode(id) {
-                target = window.location.href + "#connectServerMessageBox=" + id
+                let target = window.location.href.replace("-server.html", "-client.html")
+                target = target + "#connectServerMessageBox=" + id
                 new QRCode(serverQRSpan, {
                     text: target,
                     width: 128,
