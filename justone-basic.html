@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Just One Basic</title>
+    <script src="./justone-wordlist.js"></script>
+    <script src="./wordlist-class.js"></script>
+    <script type="text/javascript">
+        window.onload = function () {
+            var wordList = new WordList(justOneWordList)
+            const nextWordButton = document.getElementById("nextWordButton");
+            const wordH1 = document.getElementById("wordH1");
+
+            nextWordButton.onclick = function() {
+                wordH1.innerHTML = wordList.nextWord()
+            }
+            nextWordButton.onclick()
+        }
+    </script>
+</head>
+
+<body>
+    <button type="button" id="nextWordButton">Next Word</button>
+
+    <p />
+    <h1 id="wordH1"></h1>
+</body>
+
+</html>

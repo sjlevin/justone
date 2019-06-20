@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Just One Server</title>
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@0.3.20/dist/peer.min.js"></script>
+    <script src="./justone-wordlist.js"></script>
+    <script src="./wordlist-class.js"></script>
+    <script type="text/javascript">
+        window.onload = function () {
+            var connections = new Set()
+            var guesserIndex = 0
+            var guesserConn = null
+            var clues = []
+            var waitingFor = new Set()
+            var gameStarted = false
+            var currentSecret = ""
+            var wordList = new WordList(justOneWordList)
+
+            const waitTime = 500
+            const startButton = document.getElementById("startButton");
+            const serverSpan = document.getElementById("serverSpan")
+            const connectionsSpan = document.getElementById("connectionsSpan")
+            const cluesSpan = document.getElementById("clues")
+            const currentGuesserSpan = document.getElementById("currentGuesserSpan")
+
+            function getUnique(list) {
+                var count = list.reduce((prev, next) => {
+                    prev[next] = (prev[next] + 1) || 1;
+                    return prev;
+                }, {})
+                var unique = []
+                for (var key in count) {
+                    if (count[key] == 1) unique.push(key)
+                }
+                return unique
+            }
+
+            function displayConnections() {
+                connectionsArray = Array.from(connections).reduce((prev, next) => {
+                    prev.push(next.label)
+                    return prev
+                }, [])
+                connectionsSpan.innerHTML = JSON.stringify(connectionsArray)
+            }
+            function waitingForChanged() {
+                if (!gameStarted) {
+                    cluesSpan.innerHTML = ""
+                } else if (waitingFor.size == 0) {
+                    var uniqueClues = getUnique(clues)
+                    cluesSpan.innerHTML = "Clues: " + JSON.stringify(uniqueClues)
+                } else {
+                    cluesSpan.innerHTML = "Waiting for: " + JSON.stringify(Array.from(waitingFor))
+                }
+            }
+
+            var peer = new Peer()
+            console.log("peer: " + peer)
+            peer.on('error', err => {
+                alert("Error: " + err)
+            })
+            peer.on('open', id => {
+                console.log("Server ID: " + id)
+                serverSpan.innerHTML = id
+            })
+            peer.on('connection', c => {
+                connections.add(c)
+                function connectionDescription(c) {
+                    return c.peer + ":" + c.label
+                }
+                console.log("Connection opened: " + connectionDescription(c))
+                displayConnections()
+
+                waitingFor.add(c.label)
+                // only update display if we were still waiting for others
+                let msg = null
+                if (gameStarted && waitingFor.size > 1) {
+                    waitingForChanged()
+                    console.log("sending to added player " + c.label + ": " + currentSecret)
+                    msg = currentSecret
+                } else {
+                    msg = "__WAITING__"
+                }
+                // Wait before sending so the client can register its data handler
+                setTimeout(function () { c.send(msg) }, waitTime)
+
+                c.on('close', () => {
+                    console.log("Connection closed: " + connectionDescription(c))
+                    connections.delete(c)
+                    displayConnections()
+                    if (waitingFor.has(c.label)) {
+                        waitingFor.delete(c.label)
+                        waitingForChanged()
+                    }
+                })
+                c.on('data', data => {
+                    console.log("Message from " + c.label + ": " + data)
+                    clues.push(data)
+                    waitingFor.delete(c.label)
+                    waitingForChanged()
+                })
+            })
+
+
+            function sendToAllConnections(msg, ignoreConn) {
+                connections.forEach((c) => {
+                    if (c.open && c != ignoreConn) {
+                        c.send(msg);
+                        console.log("Sent: " + msg);
+                    }
+                })
+            }
+
+            // Get the next guesser from the connections set
+            function updateGuesserConn() {
+                // Sets are ordered in javascript,
+                // so we can get the next one by temporarily converting it to a string
+                let items = Array.from(connections)
+                if (guesserIndex == items.length) {
+                    guesserIndex = 0
+                }
+                guesserConn = items[guesserIndex++]
+                currentGuesserSpan.innerHTML = guesserConn.label
+                console.log("Guesser is: " + guesserConn.label)
+            }
+
+            startButton.onclick = function() {
+                if (connections.size < 2) {
+                    cluesSpan.innerHTML = "Cannot play with fewer than two players"
+                    return
+                }
+
+                gameStarted = true
+
+                currentSecret = wordList.nextWord()
+                console.log("currentSecret: " + currentSecret)
+                clues = []
+                cluesSpan.innerHTML = ""
+
+                updateGuesserConn()
+                
+                waitingFor.clear()
+                connections.forEach((c) => waitingFor.add(c.label))
+                waitingFor.delete(guesserConn.label)
+                waitingForChanged()
+                
+                sendToAllConnections(currentSecret, guesserConn)
+                guesserConn.send("__GUESSER__")
+            }
+        }
+    </script>
+</head>
+
+<body>
+    Server: <span id="serverSpan">Acquiring...</span>
+    
+    <p />
+    Connected: <span id="connectionsSpan">None</span>
+    
+    <p />
+    <button type="button" id="startButton">Next Game</button>
+
+    <p />
+    Current Guesser: <span id="currentGuesserSpan">None</span>
+
+    <p />
+    <span id="clues"></span>
+</body>
+
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Just One Client</title>
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@0.3.20/dist/peer.min.js"></script>
+    <script type="text/javascript">
+        window.onload = function () {
+            var peer = null
+            var conn = null
+
+            const connectMessageBox = document.getElementById("connectMessageBox");
+            const connectNameMessageBox = document.getElementById("connectNameMessageBox");
+            const connectButton = document.getElementById("connectButton");
+            const clueMessageBox = document.getElementById("clueMessageBox");
+            const clueSubmitButton = document.getElementById("clueSubmitButton");
+            const connectedToSpan = document.getElementById("connectedToSpan")
+            const currentSecretSpan = document.getElementById("currentSecretSpan")
+            const submittedCheckMark = document.getElementById("submittedCheckMark")
+
+            function disableClue() {
+                clueMessageBox.setAttribute("disabled", "true")
+                clueSubmitButton.setAttribute("disabled", "true")
+                submittedCheckMark.style.display = "inline"
+            }
+
+            function enableClue() {
+                clueMessageBox.removeAttribute("disabled")
+                clueSubmitButton.removeAttribute("disabled")
+                submittedCheckMark.style.display = "none"
+                clueMessageBox.focus()
+            }
+
+            function connect(id, label) {
+                if(conn != null) {
+                    conn.close()
+                }
+                console.log("connecting to " + id + " with label " + label)
+                conn = peer.connect(id, {
+                    reliable: true,
+                    label: label
+                })
+                conn.on('open', () => {
+                    console.log("Connected to: " + conn.peer)
+                    connectedToSpan.innerHTML = conn.peer
+                })
+                conn.on('data', data => {
+                    console.log("Received: " + data)
+                    switch(data) {
+                        case "__GUESSER__":
+                            disableClue()
+                            currentSecretSpan.innerHTML = "You are the current guesser."
+                            break
+                        case "__WAITING__":
+                            disableClue()
+                            currentSecretSpan.innerHTML = "Waiting for the next game to start."
+                            break
+                        default:
+                            enableClue()
+                            currentSecretSpan.innerHTML = data
+                    }
+                })
+            }
+
+            function generateOnKeyPress(button) {
+                // Listen for enter in message box and click button
+                return function (e) {
+                    var event = e || window.event;
+                    var char = event.which || event.keyCode;
+                    if (char == '13')
+                        button.click();
+                };
+            }
+
+            connectMessageBox.onkeypress = generateOnKeyPress(connectButton)
+            connectNameMessageBox.onkeypress = connectMessageBox.onkeypress
+            connectButton.onclick = function() {
+                connect(connectMessageBox.value, connectNameMessageBox.value)
+            }
+
+            clueMessageBox.onkeypress = generateOnKeyPress(clueSubmitButton)
+            clueSubmitButton.onclick = function() {
+                if (conn.open) {
+                    let msg = clueMessageBox.value;
+                    clueMessageBox.value = "";
+                    conn.send(msg);
+                    console.log("Sent: " + msg);
+                    disableClue()
+                }
+            }
+
+            peer = new Peer()
+            console.log("peer: " + peer)
+            peer.on('error', err => {
+                alert("Peer error: " + err)
+            })
+        }
+    </script>
+</head>
+
+<body>
+    <input type="text" id="connectMessageBox" placeholder="Connect to server..." autofocus="true" />
+    <input type="text" id="connectNameMessageBox" placeholder="Connect with name..." autofocus="true" />
+    <button type="button" id="connectButton">Connect</button>
+
+    <p />
+    Connected to: <span id="connectedToSpan"></span>
+
+    <p />
+    Current secret: <span id="currentSecretSpan"></span>
+
+    <p />
+    <input type="text" id="clueMessageBox" placeholder="Enter a one-word clue..." />
+    <button type="button" id="clueSubmitButton">Submit</button>
+    <span id="submittedCheckMark" style="display:none">&#9989;</span>
+</body>
+
+</html>
